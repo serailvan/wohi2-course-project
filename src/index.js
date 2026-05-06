@@ -3,6 +3,8 @@ const app = express();
 const questionsRouter = require("./routes/questions");
 const authRouter = require("./routes/auth");
 const prisma = require("./lib/prisma");
+const path = require('path');
+
 
 const PORT = process.env.PORT || 3000;
 
@@ -12,6 +14,8 @@ app.use(express.json());
 // routes
 app.use("/api/auth", authRouter);
 app.use("/api/questions", questionsRouter);
+
+app.use(express.static(path.join(__dirname, '..', 'public')));
 
 app.use((req, res) => {
   res.json({msg: "Not found"});
