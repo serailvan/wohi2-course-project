@@ -13,20 +13,20 @@ model User {
   password String @db.VarChar(255)
   name     String @db.VarChar(100)
   posts    Post[]
-  likes    Like[]
+  attempts  Attempt[] 
   @@map("users")
 }
 
 model Post {
 id       Int       @id @default(autoincrement())
-  question String    @db.VarChar(255) // Was 'title'
-  answer   String    @db.Text         // Was 'content'
-  date     DateTime  @default(now())  // Added default so it doesn't crash on create
+  question String    @db.VarChar(255)
+  answer   String    @db.Text        
+  date     DateTime  @default(now()) 
   keywords Keyword[]
   imageUrl String?   @db.VarChar(255)
   userId   Int
   user     User      @relation(fields: [userId], references: [id])
-  likes    Like[]
+  attempts Attempt[] // Replaces 'likes'
   @@map("posts")
 }
 
@@ -38,15 +38,15 @@ model Keyword {
   @@map("keywords")
 }
 
-model Like {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  userId    Int
-  user      User     @relation(fields: [userId], references: [id])
-  postId    Int
-  post      Post     @relation(fields: [postId], references: [id])
-
-  @@unique([userId, postId])
-  @@map("likes")
+model Attempt {
+  id         Int      @id @default(autoincrement())
+  isCorrect  Boolean 
+  createdAt  DateTime @default(now())
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId     Int
+  post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@index([postId])
+  @@map("attempts")
 }
-
