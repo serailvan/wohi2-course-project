@@ -158,8 +158,17 @@ async function loadQuestions(keyword = "", page = 1) {
       const isOwner = q.userId === currentUserId;
       const card = document.createElement("div");
       card.className = `question-card ${q.solved ? "solved" : ""}`;
-      
-      // RESTORED: Keywords logic and Author Name logic
+
+      let kwHTML = "";
+      if (q.keywords && q.keywords.length > 0) {
+        kwHTML = `<div class="card-keywords" style="display:flex; gap:5px; margin-bottom:10px; flex-wrap: wrap;">
+                    ${q.keywords.map(k => {
+                      const kwText = typeof k === 'object' ? k.name : k;
+                      Text ? `<span clreturn kwass="keyword-tag" style="background:#eef; font-size:0.75rem; padding:2px 6px; border-radius:3px; border:1px solid #ccd;">${kwText}</span>` : '';
+                    }).join('')}
+                  </div>`;
+      }
+
       card.innerHTML = `
         <div class="question-content">
           <div style="display:flex; align-items:center; gap:10px; margin-bottom:5px;">
@@ -167,23 +176,24 @@ async function loadQuestions(keyword = "", page = 1) {
             ${q.solved ? '<span class="solved-indicator" title="Solved">✅</span>' : ''}
           </div>
           <p style="font-size: 0.85rem; color: #666; margin-bottom: 8px;">Created by: <strong>${q.userName || 'Anonymous'}</strong></p>
-          
-          ${
-            q.keywords && q.keywords.length
-              ? `<div class="card-keywords" style="display:flex; gap:5px; margin-bottom:10px;">
-                  ${q.keywords.map(k => `<span class="keyword-tag" style="background:#eef; font-size:0.75rem; padding:2px 6px; border-radius:3px; border:1px solid #ccd;">${k}</span>`).join('')}
-                 </div>`
-              : ""
-          }
+          ${kwHTML}
         </div>
-        <div class="question-actions">
+        <div class="question-actions" style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
           <button class="btn btn-play" id="play-${q.id}">Play</button>
-          ${isOwner ? `<button class="btn btn-delete" id="delete-${q.id}">Delete</button>` : ""}
+          ${isOwner ? `
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-delete" id="delete-${q.id}">Delete</button>
+              <button class="btn btn-edit" id="edit-${q.id}">Edit</button>
+            </div>
+          ` : ""}
         </div>`;
       
       listContainer.appendChild(card);
       document.getElementById(`play-${q.id}`).onclick = () => playQuestion(q.id);
-      if (isOwner) document.getElementById(`delete-${q.id}`).onclick = () => deleteQuestion(q.id);
+      if (isOwner) {
+        document.getElementById(`edit-${q.id}`).onclick = () => showEditForm(q.id);
+        document.getElementById(`delete-${q.id}`).onclick = () => deleteQuestion(q.id);
+      }
     });
 
     const pagContainer = document.getElementById("pagination-container");
@@ -208,6 +218,17 @@ async function playQuestion(qId) {
   container.innerHTML = '<p class="loading">Loading...</p>';
   try {
     const q = await apiFetch(`${CONFIG.ROUTES.QUESTIONS}/${qId}`);
+    
+    let kwHTML = "";
+    if (q.keywords && q.keywords.length > 0) {
+      kwHTML = `<div class="question-keywords" style="display:flex; justify-content:center; gap:5px; margin-bottom:1.5rem; flex-wrap: wrap;">
+                  ${q.keywords.map(k => {
+                    const kwText = typeof k === 'object' ? k.name : k;
+                    return kwText ? `<span class="keyword" style="background:#eee; padding:2px 8px; border-radius:4px; font-size:0.8rem;">${kwText}</span>` : '';
+                  }).join('')}
+                </div>`;
+    }
+
     container.innerHTML = `
       <a href="#" id="back-btn" class="back-link">&larr; Back to questions</a>
       <div class="question-form-wrapper" style="text-align:center">
@@ -215,14 +236,7 @@ async function playQuestion(qId) {
         <p style="font-size: 0.9rem; color: #777; margin-top: -10px; margin-bottom: 15px;">By ${q.userName || 'Anonymous'}</p>
         
         ${q.imageUrl ? `<img class="question-image" src="${q.imageUrl}" alt="" style="margin:0 auto 1rem; display:block; max-width:100%;">` : ""}
-        
-        ${
-          q.keywords && q.keywords.length
-            ? `<div class="question-keywords" style="display:flex; justify-content:center; gap:5px; margin-bottom:1.5rem;">
-                ${q.keywords.map((k) => `<span class="keyword" style="background:#eee; padding:2px 8px; border-radius:4px; font-size:0.8rem;">${k}</span>`).join("")}
-               </div>`
-            : ""
-        }
+        ${kwHTML}
 
         <form id="play-form" style="text-align:left">
           <div class="form-group">
@@ -294,6 +308,52 @@ function showCreateForm() {
       loadQuestions();
     } catch (err) { document.getElementById("create-error").textContent = err.message; }
   };
+}
+
+async function showEditForm(qId) {
+  const container = document.getElementById("questions-container");
+  container.innerHTML = '<p class="loading">Loading question...</p>';
+  try {
+    const q = await apiFetch(`${CONFIG.ROUTES.QUESTIONS}/${qId}`);
+    
+    let kwString = "";
+    if (q.keywords && q.keywords.length > 0) {
+      kwString = q.keywords.map(k => typeof k === 'object' ? k.name : k).join(', ');
+    }
+
+    container.innerHTML = `
+      <button class="btn btn-back" onclick="loadQuestions()">← Back</button>
+      <h2>Edit Question</h2>
+      <form id="edit-form">
+        <div class="form-group">
+          <label>Question</label>
+          <input type="text" name="question" value="${q.question}" required />
+        </div>
+        <div class="form-group">
+          <label>Answer</label>
+          <input type="text" name="answer" value="${q.answer}" required />
+        </div>
+        <div class="form-group">
+          <label>Keywords (comma separated)</label>
+          <input type="text" name="keywords" value="${kwString}" />
+        </div>
+        <div class="form-group">
+          <label>Update Image (optional)</label>
+          <input type="file" name="image" accept="image/*" />
+        </div>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </form>
+      <p id="edit-error" class="error"></p>`;
+
+    document.getElementById("edit-form").onsubmit = async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      try {
+        await apiFetch(`${CONFIG.ROUTES.QUESTIONS}/${qId}`, { method: "PUT", body: formData });
+        loadQuestions();
+      } catch (err) { document.getElementById("edit-error").textContent = err.message; }
+    };
+  } catch (err) { container.innerHTML = `<p class="error">${err.message}</p>`; }
 }
 
 async function deleteQuestion(qId) {

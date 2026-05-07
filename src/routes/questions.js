@@ -26,8 +26,9 @@ const upload = multer({
 router.use(authenticate);
 
 function formatPost(post, userId) {
+  const { keywords, user, attempts, ...rest } = post;
   return {
-    ...post,
+    ...rest,
     keywords: post.keywords ? post.keywords.map((k) => k.name || k) : [],
     userName: post.user?.name || null,
     solved: post.attempts ? post.attempts.some(a => a.isCorrect) : false,
@@ -106,8 +107,11 @@ router.post("/", upload.single("image"), async (req, res) => {
     return res.status(400).json({ msg: "question and answer are mandatory" });
   }
 
-  const keywordsArray = typeof keywords === 'string' 
-  ? keywords.split(',').map(k => k.trim()).filter(k => k !== "")
+  const keywordsArray = keywords
+  ? String(keywords)
+      .split(",")
+      .map(k => k.trim().toLowerCase())
+      .filter(Boolean)
   : [];
   const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
@@ -139,7 +143,12 @@ router.put("/:postId", upload.single("image"), isOwner, async (req, res) => {
   }
 
   const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
-  const keywordsArray = Array.isArray(keywords) ? keywords : [];
+  const keywordsArray = keywords
+  ? String(keywords)
+      .split(",")
+      .map(k => k.trim().toLowerCase())
+      .filter(Boolean)
+  : [];
 
   const updatedPost = await prisma.post.update({
     where: { id: postId },
