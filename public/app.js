@@ -158,17 +158,18 @@ async function loadQuestions(keyword = "", page = 1) {
       const isOwner = q.userId === currentUserId;
       const card = document.createElement("div");
       card.className = `question-card ${q.solved ? "solved" : ""}`;
-
+      
+      // FIX: Bulletproof Keyword Extraction
       let kwHTML = "";
       if (q.keywords && q.keywords.length > 0) {
         kwHTML = `<div class="card-keywords" style="display:flex; gap:5px; margin-bottom:10px; flex-wrap: wrap;">
                     ${q.keywords.map(k => {
                       const kwText = typeof k === 'object' ? k.name : k;
-                      Text ? `<span clreturn kwass="keyword-tag" style="background:#eef; font-size:0.75rem; padding:2px 6px; border-radius:3px; border:1px solid #ccd;">${kwText}</span>` : '';
-                    }).join('')}
+                      return kwText ? `<span class="keyword" style="background:#e2e8f0; color:#0f172a; font-weight:bold; padding:2px 8px; border-radius:4px; font-size:0.8rem; border:1px solid #94a3b8;">${kwText}</span>` : '';                    }).join('')}
                   </div>`;
       }
 
+      // FIX: Button Layout aligned left and right
       card.innerHTML = `
         <div class="question-content">
           <div style="display:flex; align-items:center; gap:10px; margin-bottom:5px;">
@@ -219,13 +220,13 @@ async function playQuestion(qId) {
   try {
     const q = await apiFetch(`${CONFIG.ROUTES.QUESTIONS}/${qId}`);
     
+    // FIX: Bulletproof Keyword Extraction for Play View
     let kwHTML = "";
     if (q.keywords && q.keywords.length > 0) {
       kwHTML = `<div class="question-keywords" style="display:flex; justify-content:center; gap:5px; margin-bottom:1.5rem; flex-wrap: wrap;">
                   ${q.keywords.map(k => {
                     const kwText = typeof k === 'object' ? k.name : k;
-                    return kwText ? `<span class="keyword" style="background:#eee; padding:2px 8px; border-radius:4px; font-size:0.8rem;">${kwText}</span>` : '';
-                  }).join('')}
+                    return kwText ? `<span class="keyword" style="background:#e2e8f0; color:#0f172a; font-weight:bold; padding:2px 8px; border-radius:4px; font-size:0.8rem; border:1px solid #94a3b8;">${kwText}</span>` : '';                  }).join('')}
                 </div>`;
     }
 
@@ -316,6 +317,7 @@ async function showEditForm(qId) {
   try {
     const q = await apiFetch(`${CONFIG.ROUTES.QUESTIONS}/${qId}`);
     
+    // Convert keywords to a comma string for the input box safely
     let kwString = "";
     if (q.keywords && q.keywords.length > 0) {
       kwString = q.keywords.map(k => typeof k === 'object' ? k.name : k).join(', ');
