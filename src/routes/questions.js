@@ -5,6 +5,7 @@ const authenticate = require("../middleware/auth");
 const isOwner = require("../middleware/isOwner");
 const multer = require("multer");
 const path = require('path');
+const { z } = require("zod");
 
 const storage = multer.diskStorage({
   destination: path.join(__dirname, "..", "..", "public", "uploads"),
@@ -18,9 +19,29 @@ const upload = multer({
   storage,
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith("image/")) cb(null, true);
-    else cb(new Error("Only image files are allowed"));
+    else cb(new ValidationError("Only image files are allowed"));
   },
   limits: { fileSize: 5 * 1024 * 1024 },
+});
+
+router.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError ||
+      err?.message === "Only image files are allowed") {
+    return res.status(400).json({ msg: err.message });
+  }
+  next(err); // pass through to global handler
+});
+
+const PostInput = z.object({
+  title: z.string().min(1),
+  date: z.string().date(),
+  content: z.string().min(1),
+  keywords: z.union([z.string(), z.array(z.string())]).optional(),
+});
+
+router.post("/", upload.single("image"), async (req, res) => {
+  const data = PostInput.parse(req.body); // throws ZodError on failure
+  // ...rest unchanged, using `data.title` etc.
 });
 
 router.use(authenticate);
@@ -93,7 +114,7 @@ router.get("/:postId", async (req, res) => {
   });
 
   if (!post) {
-    return res.status(404).json({ message: "Question not found" });
+    throw new NotFoundError("Post not found")
   }
 
   res.json(formatPost(post, userId));
@@ -104,7 +125,7 @@ router.post("/", upload.single("image"), async (req, res) => {
   const { question, answer, keywords } = req.body;
 
   if (!question || !answer) {
-    return res.status(400).json({ msg: "question and answer are mandatory" });
+    throw new ValidationError("Question and answer are mandatory");
   }
 
   const keywordsArray = keywords
@@ -139,7 +160,7 @@ router.put("/:postId", upload.single("image"), isOwner, async (req, res) => {
   const { question, answer, keywords } = req.body;
 
   if (!question || !answer) {
-    return res.status(400).json({ msg: "question and answer are mandatory" });
+    throw new NotFoundError("Question and answer are mandatory");
   }
 
   const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
@@ -178,7 +199,7 @@ router.delete("/:postId", isOwner, async (req, res) => {
   });
 
   if (!post) {
-    return res.status(404).json({ message: "Question not found" });
+    throw new NotFoundError("Question not found");
   }
 
   await prisma.post.delete({ where: { id: postId } });
@@ -199,7 +220,7 @@ router.post("/:postId/play", async (req, res) => {
   });
 
   if (!post) {
-    return res.status(404).json({ message: "Question not found" });
+    throw new NotFoundError("Question not found");
   }
 
   const isCorrect = post.answer.trim().toLowerCase() === String(answer || "").trim().toLowerCase();

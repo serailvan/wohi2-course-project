@@ -159,7 +159,6 @@ async function loadQuestions(keyword = "", page = 1) {
       const card = document.createElement("div");
       card.className = `question-card ${q.solved ? "solved" : ""}`;
       
-      // FIX: Bulletproof Keyword Extraction
       let kwHTML = "";
       if (q.keywords && q.keywords.length > 0) {
         kwHTML = `<div class="card-keywords" style="display:flex; gap:5px; margin-bottom:10px; flex-wrap: wrap;">
@@ -169,7 +168,6 @@ async function loadQuestions(keyword = "", page = 1) {
                   </div>`;
       }
 
-      // FIX: Button Layout aligned left and right
       card.innerHTML = `
         <div class="question-content">
           <div style="display:flex; align-items:center; gap:10px; margin-bottom:5px;">
@@ -219,8 +217,7 @@ async function playQuestion(qId) {
   container.innerHTML = '<p class="loading">Loading...</p>';
   try {
     const q = await apiFetch(`${CONFIG.ROUTES.QUESTIONS}/${qId}`);
-    
-    // FIX: Bulletproof Keyword Extraction for Play View
+
     let kwHTML = "";
     if (q.keywords && q.keywords.length > 0) {
       kwHTML = `<div class="question-keywords" style="display:flex; justify-content:center; gap:5px; margin-bottom:1.5rem; flex-wrap: wrap;">
