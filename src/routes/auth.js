@@ -5,13 +5,16 @@ const jwt = require("jsonwebtoken");
 const prisma = require("../lib/prisma");
 
 const SECRET = process.env.JWT_SECRET;
-// Here we will add all routes related to authentication
 
-// POST /api/auth/register
 const { ValidationError, ConflictError, UnauthorizedError }
   = require("../lib/errors");
 
-router.post("/register", async (req, res) => {
+// Here we will add all routes related to authentication
+
+
+// POST /api/auth/register
+router.post("/register", async (req, res, next) => {
+  try {
   const { email, password, name } = req.body;
   if (!email || !password || !name)
     throw new ValidationError("email, password and name are required");
@@ -24,23 +27,26 @@ router.post("/register", async (req, res) => {
   const token = jwt.sign({ userId: user.id }, SECRET, { expiresIn: "1h" });
 
   res.status(201).json({ message: "User registered successfully", token });
+  } catch (err) {
+    console.error(err);
+    next(err);
+  }
 });
-  
-  // POST /api/auth/login
-  router.post("/login", async (req, res) => {
-    const { email, password } = req.body;
-    if (!email || !password)
-      throw new ValidationError("email and password are required");
-  
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) throw new UnauthorizedError("Invalid credentials");
-  
-    const ok = await bcrypt.compare(password, user.password);
-    if (!ok) throw new UnauthorizedError("Invalid credentials");
-  
-    const token = jwt.sign({ userId: user.id }, SECRET, { expiresIn: "1h" });
-    res.json({ token });
-  });
-  
 
-module.exports = router; // This should be the last line
+// POST /api/auth/login
+router.post("/login", async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password)
+    throw new ValidationError("email and password are required");
+
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) throw new UnauthorizedError("Invalid credentials");
+
+  const ok = await bcrypt.compare(password, user.password);
+  if (!ok) throw new UnauthorizedError("Invalid credentials");
+
+  const token = jwt.sign({ userId: user.id }, SECRET, { expiresIn: "1h" });
+  res.json({ token });
+});
+
+module.exports = router;
